@@ -57,10 +57,11 @@ async function main() {
   await page.click('input[type="password"]:visible');
   await page.keyboard.type(BB_PASS, { delay: 50 });
 
-  // click submit
+  // click the "دخول" login button (not the passkey or national login button)
   const submitResult = await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button[type="submit"]')].find(b => b.offsetParent !== null)
-      || [...document.querySelectorAll('button')].find(b => b.offsetParent !== null);
+    // prefer button whose text starts with دخ (دخول = Enter/Login)
+    const btn = [...document.querySelectorAll('button')].find(b => b.offsetParent !== null && b.textContent.trim().startsWith('دخ'))
+      || [...document.querySelectorAll('button[type="submit"]')].find(b => b.offsetParent !== null);
     if (btn) { btn.click(); return 'clicked:' + btn.textContent.trim().slice(0, 30); }
     return 'no submit btn';
   });

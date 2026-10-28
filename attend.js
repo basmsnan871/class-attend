@@ -21,18 +21,20 @@ async function main() {
     ],
   });
 
-  const page = await browser.newPage();
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  });
+  const page = await context.newPage();
 
-  // Login via UQU SSO (https://uqu.edu.sa/Sso/Login)
-  // Fields have random Livewire IDs and no name attr — use type+position
+  // Login via UQU SSO — go directly to SSO login page
   console.log('Logging in...');
-  await page.goto('https://lms.uqu.edu.sa/', { waitUntil: 'networkidle' });
+  await page.goto('https://uqu.edu.sa/Sso/Login', { waitUntil: 'domcontentloaded' });
   console.log('Landed on:', page.url());
-  await page.waitForSelector('input[type="password"]', { state: 'visible', timeout: 30000 });
+  await page.waitForSelector('input[type="password"]', { state: 'visible', timeout: 45000 });
   await page.locator('input[type="text"]').filter({ visible: true }).first().fill(BB_USER);
   await page.locator('input[type="password"]').fill(BB_PASS);
   await page.locator('button[type="submit"]').filter({ visible: true }).first().click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForURL('**/ultra/**', { timeout: 30000 });
   console.log('Logged in, now at:', page.url());
 
   // Go to courses

@@ -26,6 +26,9 @@ async function main() {
   // Login to Blackboard
   console.log('Logging in...');
   await page.goto('https://lms.uqu.edu.sa/', { waitUntil: 'networkidle' });
+  console.log('Landed on:', page.url());
+  const html = await page.content();
+  console.log('Page HTML (first 3000):', html.slice(0, 3000));
 
   // Handle SSO login form
   await page.fill('input[name="username"], input[type="email"], #username', BB_USER);

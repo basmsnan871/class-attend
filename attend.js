@@ -28,9 +28,10 @@ async function main() {
   console.log('Logging in...');
   await page.goto('https://lms.uqu.edu.sa/', { waitUntil: 'networkidle' });
   console.log('Landed on:', page.url());
-  await page.locator('input[type="text"]').first().fill(BB_USER);
+  await page.waitForSelector('input[type="password"]', { state: 'visible', timeout: 30000 });
+  await page.locator('input[type="text"]').filter({ visible: true }).first().fill(BB_USER);
   await page.locator('input[type="password"]').fill(BB_PASS);
-  await page.locator('button[type="submit"]').first().click();
+  await page.locator('button[type="submit"]').filter({ visible: true }).first().click();
   await page.waitForLoadState('networkidle');
   console.log('Logged in, now at:', page.url());
 

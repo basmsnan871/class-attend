@@ -30,6 +30,8 @@ async function main() {
   console.log('Logging in...');
   await page.goto('https://uqu.edu.sa/Sso/Login', { waitUntil: 'networkidle' });
   console.log('Landed on:', page.url());
+  await page.screenshot({ path: 'debug-login.png', fullPage: true });
+  console.log('Screenshot saved.');
 
   // Wait for Livewire to boot — poll until a password input exists in DOM
   await page.waitForFunction(() => !!document.querySelector('input[type="password"]'), { timeout: 45000 });

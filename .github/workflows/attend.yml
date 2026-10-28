@@ -48,3 +48,11 @@ jobs:
           BB_USER: ${{ secrets.BB_USER }}
           BB_PASS: ${{ secrets.BB_PASS }}
         run: node attend.js ${{ steps.class.outputs.name }}
+
+      - name: Upload debug screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: debug-login.png
+          if-no-files-found: ignore

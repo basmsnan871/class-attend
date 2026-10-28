@@ -57,4 +57,5 @@ jobs:
             debug-login.png
             debug-courses.png
             debug-search.png
+            debug-course-page.png
           if-no-files-found: ignore

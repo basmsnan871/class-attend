@@ -91,10 +91,37 @@ async function main() {
   await page.waitForSelector(`text=${COURSE_NAMES[CLASS]}`, { timeout: 30000 });
   await page.click(`text=${COURSE_NAMES[CLASS]}`);
   await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(3000);
   console.log('Opened course:', CLASS);
+  console.log('Course URL:', page.url());
+  await page.screenshot({ path: 'debug-course-page.png', fullPage: true });
 
-  // Click "Join session" dropdown
-  await page.click('text=Join session');
+  // Log all buttons and links to find Join session equivalent
+  const btns = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('button, a, [role="button"]'))
+      .map(el => el.innerText.trim() || el.getAttribute('aria-label') || el.getAttribute('title'))
+      .filter(t => t && t.length > 1 && t.length < 80)
+      .slice(0, 30)
+  );
+  console.log('Buttons on course page:', JSON.stringify(btns));
+
+  // Click "Join session" dropdown — try various selectors
+  const joinSelectors = [
+    'text=Join session', 'text=انضم إلى الجلسة', 'text=Join Session',
+    '[aria-label*="Join"]', '[aria-label*="انضم"]',
+    'button:has-text("Join")', 'a:has-text("Join")',
+  ];
+  let joined = false;
+  for (const sel of joinSelectors) {
+    try {
+      await page.waitForSelector(sel, { timeout: 5000 });
+      await page.click(sel);
+      joined = true;
+      console.log('Clicked join with:', sel);
+      break;
+    } catch (_) {}
+  }
+  if (!joined) throw new Error('Join session button not found — check debug-course-page.png and Buttons log');
   await page.waitForTimeout(800);
   await page.click('text=Course Room');
 

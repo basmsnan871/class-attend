@@ -55,5 +55,5 @@ jobs:
           name: debug-screenshots
           path: |
             debug-login.png
-            debug-after-submit.png
+            debug-courses.png
           if-no-files-found: ignore

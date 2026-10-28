@@ -55,8 +55,13 @@ async function main() {
 
   // Go to courses
   await page.goto('https://lms.uqu.edu.sa/ultra/course', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(5000); // wait for React to hydrate courses list
+  await page.screenshot({ path: 'debug-courses.png', fullPage: true });
+  const coursePageText = await page.evaluate(() => document.body.innerText.trim().slice(0, 1000));
+  console.log('Courses page text:', coursePageText);
 
-  // Click target course
+  // Click target course — wait up to 60s for async load
+  await page.waitForSelector(COURSE_SELECTORS[CLASS], { timeout: 60000 });
   await page.click(COURSE_SELECTORS[CLASS]);
   await page.waitForLoadState('networkidle');
   console.log('Opened course:', CLASS);

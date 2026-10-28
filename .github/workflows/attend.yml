@@ -45,8 +45,7 @@ jobs:
 
       - name: Attend class
         env:
-          BB_USER: ${{ secrets.BB_USER }}
-          BB_PASS: ${{ secrets.BB_PASS }}
+          BB_COOKIES: ${{ secrets.BB_COOKIES }}
         run: node attend.js ${{ steps.class.outputs.name }}
 
       - name: Upload debug screenshot

@@ -1,14 +1,25 @@
 const { chromium } = require('playwright');
 
 const CLASS = process.argv[2] || 'ai';
-const BB_USER = process.env.BB_USER;
-const BB_PASS = process.env.BB_PASS;
+const BB_COOKIES = process.env.BB_COOKIES;
 const MY_NAME = 'باسم ممدوح بن عمر سنان';
 
 const COURSE_SELECTORS = {
   ai:     'text=مقدمة في الذكاء الاصطناعي',
   design: 'text=التفكير التصميمي',
 };
+
+function parseCookies(cookieStr) {
+  return cookieStr.split(';').map(pair => {
+    const idx = pair.indexOf('=');
+    return {
+      name: pair.slice(0, idx).trim(),
+      value: pair.slice(idx + 1).trim(),
+      domain: 'lms.uqu.edu.sa',
+      path: '/',
+    };
+  }).filter(c => c.name);
+}
 
 async function main() {
   const browser = await chromium.launch({
@@ -24,57 +35,23 @@ async function main() {
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   });
+
+  // Inject saved session cookies — skip SSO login entirely
+  console.log('Injecting session cookies...');
+  await context.addCookies(parseCookies(BB_COOKIES));
+
   const page = await context.newPage();
 
-  // Login via UQU SSO
-  console.log('Logging in...');
-  await page.goto('https://uqu.edu.sa/Sso/Login', { waitUntil: 'networkidle' });
+  // Go straight to Blackboard
+  await page.goto('https://lms.uqu.edu.sa/ultra/course', { waitUntil: 'networkidle' });
   console.log('Landed on:', page.url());
   await page.screenshot({ path: 'debug-login.png', fullPage: true });
-  console.log('Screenshot saved.');
 
-  // Wait for Livewire to boot — poll until a password input exists in DOM
-  await page.waitForFunction(() => !!document.querySelector('input[type="password"]'), { timeout: 45000 });
-
-  // Dump inputs for debugging
-  const inputDump = await page.evaluate(() =>
-    [...document.querySelectorAll('input')].map(i => ({ type: i.type, name: i.name, id: i.id, visible: i.offsetParent !== null }))
-  );
-  console.log('Inputs found:', JSON.stringify(inputDump));
-
-  // Click and type directly so Livewire wire:model fires naturally
-  const SKIP = new Set(['password', 'hidden', 'submit', 'button', 'checkbox', 'radio', 'file', 'image', 'reset', 'search']);
-  const textInputId = await page.evaluate((skipTypes) => {
-    const el = [...document.querySelectorAll('input')].find(i => !skipTypes.includes(i.type) && i.offsetParent !== null);
-    return el ? '#' + el.id : null;
-  }, [...SKIP]);
-  if (!textInputId) throw new Error('no visible username input found');
-  console.log('Username input:', textInputId);
-
-  await page.click(textInputId);
-  await page.keyboard.type(BB_USER, { delay: 50 });
-
-  await page.click('input[type="password"]:visible');
-  await page.keyboard.type(BB_PASS, { delay: 50 });
-
-  // click the "دخول" login button (not the passkey or national login button)
-  const submitResult = await page.evaluate(() => {
-    // prefer button whose text starts with دخ (دخول = Enter/Login)
-    const btn = [...document.querySelectorAll('button')].find(b => b.offsetParent !== null && b.textContent.trim().startsWith('دخ'))
-      || [...document.querySelectorAll('button[type="submit"]')].find(b => b.offsetParent !== null);
-    if (btn) { btn.click(); return 'clicked:' + btn.textContent.trim().slice(0, 30); }
-    return 'no submit btn';
-  });
-  console.log('Submit:', submitResult);
-  // wait briefly then screenshot to see any error messages
-  await page.waitForTimeout(3000);
-  await page.screenshot({ path: 'debug-after-submit.png', fullPage: true });
-  console.log('Post-submit URL:', page.url());
-  const pageText = await page.evaluate(() => document.body.innerText.trim().slice(0, 500));
-  console.log('Post-submit page text:', pageText);
-  // wait for redirect away from SSO
-  await page.waitForFunction(() => !window.location.href.includes('uqu.edu.sa/Sso'), { timeout: 45000 });
-  console.log('Redirected to:', page.url());
+  // If redirected to login page, cookies have expired
+  if (page.url().includes('login') || page.url().includes('Sso')) {
+    throw new Error('Session cookies expired — refresh BB_COOKIES secret');
+  }
+  console.log('Logged in via cookies.');
 
   // Go to courses
   await page.goto('https://lms.uqu.edu.sa/ultra/course', { waitUntil: 'networkidle' });

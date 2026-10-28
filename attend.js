@@ -28,7 +28,12 @@ async function main() {
   await page.goto('https://lms.uqu.edu.sa/', { waitUntil: 'networkidle' });
   console.log('Landed on:', page.url());
   const html = await page.content();
-  console.log('Page HTML (first 8000):', html.slice(0, 8000));
+  const inputs = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('input')).map(i => ({
+      id: i.id, name: i.name, type: i.type, placeholder: i.placeholder
+    }))
+  );
+  console.log('Inputs on page:', JSON.stringify(inputs));
 
   // Handle SSO login form
   await page.fill('input[name="username"], input[type="email"], #username', BB_USER);

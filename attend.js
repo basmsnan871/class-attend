@@ -55,10 +55,34 @@ async function main() {
 
   // Go to courses and use search to find the course (bypasses pagination)
   await page.goto('https://lms.uqu.edu.sa/ultra/course', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(3000);
+
+  // Log all inputs on the page to find the search box selector
+  const inputs = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('input')).map(el => ({
+      id: el.id, name: el.name, type: el.type,
+      placeholder: el.placeholder, ariaLabel: el.getAttribute('aria-label'),
+      className: el.className.slice(0, 60),
+    }))
+  );
+  console.log('Inputs on page:', JSON.stringify(inputs));
   await page.screenshot({ path: 'debug-courses.png', fullPage: true });
 
-  // Wait for search box and type course name
-  const searchBox = await page.waitForSelector('input[placeholder*="Search"], input[aria-label*="Search"], input[placeholder*="ابحث"], input[aria-label*="بحث"]', { timeout: 30000 });
+  // Try common search selectors including Blackboard Ultra's actual input
+  const searchSelectors = [
+    'input[data-id*="search"]', 'input[id*="search"]', 'input[id*="Search"]',
+    'input[placeholder*="Search"]', 'input[aria-label*="Search"]',
+    'input[placeholder*="ابحث"]', 'input[aria-label*="بحث"]',
+    'bb-search-field input', 'bb-course-search input',
+    '[data-automation-id*="search"] input', 'input[type="search"]',
+  ];
+  let searchBox = null;
+  for (const sel of searchSelectors) {
+    searchBox = await page.$(sel);
+    if (searchBox) { console.log('Found search box with:', sel); break; }
+  }
+  if (!searchBox) throw new Error('Search box not found — check Inputs log above');
+
   await searchBox.fill(COURSE_NAMES[CLASS]);
   await page.waitForTimeout(2000); // wait for search results
   await page.screenshot({ path: 'debug-search.png', fullPage: true });

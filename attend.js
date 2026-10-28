@@ -26,14 +26,32 @@ async function main() {
   });
   const page = await context.newPage();
 
-  // Login via UQU SSO — go directly to SSO login page
+  // Login via UQU SSO
   console.log('Logging in...');
-  await page.goto('https://uqu.edu.sa/Sso/Login', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://uqu.edu.sa/Sso/Login', { waitUntil: 'networkidle' });
   console.log('Landed on:', page.url());
-  await page.waitForSelector('input[type="password"]', { state: 'visible', timeout: 45000 });
-  await page.locator('input[type="text"]').filter({ visible: true }).first().fill(BB_USER);
-  await page.locator('input[type="password"]').fill(BB_PASS);
-  await page.locator('button[type="submit"]').filter({ visible: true }).first().click();
+
+  // Wait for Livewire to boot — poll until a password input exists in DOM
+  await page.waitForFunction(() => !!document.querySelector('input[type="password"]'), { timeout: 45000 });
+
+  // Fill via native setter so Livewire/Alpine picks up the change
+  await page.evaluate(([user, pass]) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    const textInput = [...document.querySelectorAll('input[type="text"]')]
+      .find(i => i.name === '');
+    const pwInput = document.querySelector('input[type="password"]');
+    setter.call(textInput, user);
+    textInput.dispatchEvent(new Event('input', { bubbles: true }));
+    textInput.dispatchEvent(new Event('change', { bubbles: true }));
+    setter.call(pwInput, pass);
+    pwInput.dispatchEvent(new Event('input', { bubbles: true }));
+    pwInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }, [BB_USER, BB_PASS]);
+
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button[type="submit"]')].find(b => b.offsetParent !== null);
+    if (btn) btn.click();
+  });
   await page.waitForURL('**/ultra/**', { timeout: 30000 });
   console.log('Logged in, now at:', page.url());
 

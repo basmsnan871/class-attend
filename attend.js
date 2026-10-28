@@ -23,24 +23,16 @@ async function main() {
 
   const page = await browser.newPage();
 
-  // Login to Blackboard
+  // Login via UQU SSO (https://uqu.edu.sa/Sso/Login)
+  // Fields have random Livewire IDs and no name attr — use type+position
   console.log('Logging in...');
   await page.goto('https://lms.uqu.edu.sa/', { waitUntil: 'networkidle' });
   console.log('Landed on:', page.url());
-  const html = await page.content();
-  const inputs = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('input')).map(i => ({
-      id: i.id, name: i.name, type: i.type, placeholder: i.placeholder
-    }))
-  );
-  console.log('Inputs on page:', JSON.stringify(inputs));
-
-  // Handle SSO login form
-  await page.fill('input[name="username"], input[type="email"], #username', BB_USER);
-  await page.fill('input[name="password"], input[type="password"], #password', BB_PASS);
-  await page.click('button[type="submit"], input[type="submit"], #submitButton');
+  await page.locator('input[type="text"]').first().fill(BB_USER);
+  await page.locator('input[type="password"]').fill(BB_PASS);
+  await page.locator('button[type="submit"]').first().click();
   await page.waitForLoadState('networkidle');
-  console.log('Logged in.');
+  console.log('Logged in, now at:', page.url());
 
   // Go to courses
   await page.goto('https://lms.uqu.edu.sa/ultra/course', { waitUntil: 'networkidle' });

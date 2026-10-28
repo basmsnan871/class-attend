@@ -36,41 +36,37 @@ async function main() {
   // Wait for Livewire to boot — poll until a password input exists in DOM
   await page.waitForFunction(() => !!document.querySelector('input[type="password"]'), { timeout: 45000 });
 
-  // Dump all inputs for debugging
+  // Dump inputs for debugging
   const inputDump = await page.evaluate(() =>
     [...document.querySelectorAll('input')].map(i => ({ type: i.type, name: i.name, id: i.id, visible: i.offsetParent !== null }))
   );
   console.log('Inputs found:', JSON.stringify(inputDump));
 
-  // Fill via native setter so Livewire/Alpine picks up the change
-  await page.evaluate(([user, pass]) => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    // find any non-password, non-hidden, non-submit input (username field)
-    const SKIP = new Set(['password', 'hidden', 'submit', 'button', 'checkbox', 'radio', 'file', 'image', 'reset', 'search']);
-    const textInput = [...document.querySelectorAll('input')].find(i => !SKIP.has(i.type));
-    const pwInput = document.querySelector('input[type="password"]');
-    if (!textInput) throw new Error('username input not found');
-    if (!pwInput) throw new Error('password input not found');
-    setter.call(textInput, user);
-    textInput.dispatchEvent(new Event('input', { bubbles: true }));
-    textInput.dispatchEvent(new Event('change', { bubbles: true }));
-    setter.call(pwInput, pass);
-    pwInput.dispatchEvent(new Event('input', { bubbles: true }));
-    pwInput.dispatchEvent(new Event('change', { bubbles: true }));
-  }, [BB_USER, BB_PASS]);
+  // Click and type directly so Livewire wire:model fires naturally
+  const SKIP = new Set(['password', 'hidden', 'submit', 'button', 'checkbox', 'radio', 'file', 'image', 'reset', 'search']);
+  const textInputId = await page.evaluate((skipTypes) => {
+    const el = [...document.querySelectorAll('input')].find(i => !skipTypes.includes(i.type) && i.offsetParent !== null);
+    return el ? '#' + el.id : null;
+  }, [...SKIP]);
+  if (!textInputId) throw new Error('no visible username input found');
+  console.log('Username input:', textInputId);
 
+  await page.click(textInputId);
+  await page.keyboard.type(BB_USER, { delay: 50 });
+
+  await page.click('input[type="password"]:visible');
+  await page.keyboard.type(BB_PASS, { delay: 50 });
+
+  // click submit
   const submitResult = await page.evaluate(() => {
-    // try button[type=submit], then first visible button, then form.submit()
     const btn = [...document.querySelectorAll('button[type="submit"]')].find(b => b.offsetParent !== null)
       || [...document.querySelectorAll('button')].find(b => b.offsetParent !== null);
     if (btn) { btn.click(); return 'clicked:' + btn.textContent.trim().slice(0, 30); }
-    const form = document.querySelector('form');
-    if (form) { form.submit(); return 'form.submit'; }
-    return 'no button or form found';
+    return 'no submit btn';
   });
   console.log('Submit:', submitResult);
-  // wait for navigation away from SSO page (may redirect to LMS root, not /ultra/)
-  await page.waitForFunction(() => !window.location.href.includes('uqu.edu.sa/Sso'), { timeout: 30000 });
+  // wait for redirect away from SSO
+  await page.waitForFunction(() => !window.location.href.includes('uqu.edu.sa/Sso'), { timeout: 45000 });
   console.log('Redirected to:', page.url());
 
   // Go to courses

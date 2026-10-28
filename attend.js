@@ -59,12 +59,19 @@ async function main() {
     pwInput.dispatchEvent(new Event('change', { bubbles: true }));
   }, [BB_USER, BB_PASS]);
 
-  await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button[type="submit"]')].find(b => b.offsetParent !== null);
-    if (btn) btn.click();
+  const submitResult = await page.evaluate(() => {
+    // try button[type=submit], then first visible button, then form.submit()
+    const btn = [...document.querySelectorAll('button[type="submit"]')].find(b => b.offsetParent !== null)
+      || [...document.querySelectorAll('button')].find(b => b.offsetParent !== null);
+    if (btn) { btn.click(); return 'clicked:' + btn.textContent.trim().slice(0, 30); }
+    const form = document.querySelector('form');
+    if (form) { form.submit(); return 'form.submit'; }
+    return 'no button or form found';
   });
-  await page.waitForURL('**/ultra/**', { timeout: 30000 });
-  console.log('Logged in, now at:', page.url());
+  console.log('Submit:', submitResult);
+  // wait for navigation away from SSO page (may redirect to LMS root, not /ultra/)
+  await page.waitForFunction(() => !window.location.href.includes('uqu.edu.sa/Sso'), { timeout: 30000 });
+  console.log('Redirected to:', page.url());
 
   // Go to courses
   await page.goto('https://lms.uqu.edu.sa/ultra/course', { waitUntil: 'networkidle' });

@@ -4,9 +4,9 @@ const CLASS = process.argv[2] || 'ai';
 const BB_COOKIES = process.env.BB_COOKIES;
 const MY_NAME = 'باسم ممدوح بن عمر سنان';
 
-const COURSE_SELECTORS = {
-  ai:     'text=مقدمة في الذكاء الاصطناعي',
-  design: 'text=التفكير التصميمي',
+const COURSE_NAMES = {
+  ai:     'مقدمة في الذكاء الاصطناعي',
+  design: 'التفكير التصميمي',
 };
 
 function parseCookies(cookieStr) {
@@ -53,16 +53,19 @@ async function main() {
   }
   console.log('Logged in via cookies.');
 
-  // Go to courses
+  // Go to courses and use search to find the course (bypasses pagination)
   await page.goto('https://lms.uqu.edu.sa/ultra/course', { waitUntil: 'networkidle' });
-  await page.waitForTimeout(5000); // wait for React to hydrate courses list
   await page.screenshot({ path: 'debug-courses.png', fullPage: true });
-  const coursePageText = await page.evaluate(() => document.body.innerText.trim().slice(0, 1000));
-  console.log('Courses page text:', coursePageText);
 
-  // Click target course — wait up to 60s for async load
-  await page.waitForSelector(COURSE_SELECTORS[CLASS], { timeout: 60000 });
-  await page.click(COURSE_SELECTORS[CLASS]);
+  // Wait for search box and type course name
+  const searchBox = await page.waitForSelector('input[placeholder*="Search"], input[aria-label*="Search"], input[placeholder*="ابحث"], input[aria-label*="بحث"]', { timeout: 30000 });
+  await searchBox.fill(COURSE_NAMES[CLASS]);
+  await page.waitForTimeout(2000); // wait for search results
+  await page.screenshot({ path: 'debug-search.png', fullPage: true });
+
+  // Click first result containing the course name
+  await page.waitForSelector(`text=${COURSE_NAMES[CLASS]}`, { timeout: 30000 });
+  await page.click(`text=${COURSE_NAMES[CLASS]}`);
   await page.waitForLoadState('networkidle');
   console.log('Opened course:', CLASS);
 

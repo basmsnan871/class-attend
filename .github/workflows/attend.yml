@@ -56,4 +56,5 @@ jobs:
           path: |
             debug-login.png
             debug-courses.png
+            debug-search.png
           if-no-files-found: ignore

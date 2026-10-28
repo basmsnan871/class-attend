@@ -54,5 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug-screenshots
-          path: debug-login.png
+          path: |
+            debug-login.png
+            debug-after-submit.png
           if-no-files-found: ignore

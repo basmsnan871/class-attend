@@ -66,6 +66,12 @@ async function main() {
     return 'no submit btn';
   });
   console.log('Submit:', submitResult);
+  // wait briefly then screenshot to see any error messages
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: 'debug-after-submit.png', fullPage: true });
+  console.log('Post-submit URL:', page.url());
+  const pageText = await page.evaluate(() => document.body.innerText.trim().slice(0, 500));
+  console.log('Post-submit page text:', pageText);
   // wait for redirect away from SSO
   await page.waitForFunction(() => !window.location.href.includes('uqu.edu.sa/Sso'), { timeout: 45000 });
   console.log('Redirected to:', page.url());

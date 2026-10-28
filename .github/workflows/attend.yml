@@ -1,0 +1,50 @@
+name: Class Attendance
+
+on:
+  schedule:
+    # Sunday 18:00 Saudi time = 15:00 UTC
+    - cron: '0 15 * * 0'
+    # Tuesday 18:00 Saudi time = 15:00 UTC
+    - cron: '0 15 * * 2'
+  workflow_dispatch:
+    inputs:
+      class:
+        description: 'Class to join (ai or design)'
+        required: true
+        default: 'ai'
+
+jobs:
+  attend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Determine class
+        id: class
+        run: |
+          DAY=$(date +%u)  # 1=Mon ... 7=Sun
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ github.event.inputs.class }}" >> $GITHUB_OUTPUT
+          elif [ "$DAY" = "7" ]; then
+            echo "name=ai" >> $GITHUB_OUTPUT
+          else
+            echo "name=design" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Attend class
+        env:
+          BB_USER: ${{ secrets.BB_USER }}
+          BB_PASS: ${{ secrets.BB_PASS }}
+        run: node attend.js ${{ steps.class.outputs.name }}

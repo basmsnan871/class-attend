@@ -84,14 +84,24 @@ async function main() {
   if (!searchBox) throw new Error('Search box not found — check Inputs log above');
 
   await searchBox.fill(COURSE_NAMES[CLASS]);
-  await page.waitForTimeout(2000); // wait for search results
+  await page.waitForTimeout(3000); // wait for search results
   await page.screenshot({ path: 'debug-search.png', fullPage: true });
 
-  // Click first result containing the course name
-  await page.waitForSelector(`text=${COURSE_NAMES[CLASS]}`, { timeout: 30000 });
-  await page.click(`text=${COURSE_NAMES[CLASS]}`);
-  await page.waitForLoadState('networkidle');
+  // Click the course card link — use evaluate to find and click the first link
+  // whose text contains the course name (not the delete-filter button)
+  const clicked = await page.evaluate((name) => {
+    const els = Array.from(document.querySelectorAll('a, button, [role="link"], [role="button"]'));
+    const match = els.find(el => {
+      const t = el.innerText || el.textContent || '';
+      return t.includes(name) && !el.getAttribute('aria-label')?.includes('Delete') && !el.getAttribute('aria-label')?.includes('filter');
+    });
+    if (match) { match.click(); return match.innerText || match.textContent; }
+    return null;
+  }, COURSE_NAMES[CLASS]);
+  if (!clicked) throw new Error('Course card not found in search results');
+  console.log('Clicked course card:', clicked.trim().slice(0, 60));
   await page.waitForTimeout(3000);
+  await page.waitForLoadState('networkidle');
   console.log('Opened course:', CLASS);
   console.log('Course URL:', page.url());
   await page.screenshot({ path: 'debug-course-page.png', fullPage: true });

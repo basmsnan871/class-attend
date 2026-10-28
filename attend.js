@@ -28,7 +28,7 @@ async function main() {
   await page.goto('https://lms.uqu.edu.sa/', { waitUntil: 'networkidle' });
   console.log('Landed on:', page.url());
   const html = await page.content();
-  console.log('Page HTML (first 3000):', html.slice(0, 3000));
+  console.log('Page HTML (first 8000):', html.slice(0, 8000));
 
   // Handle SSO login form
   await page.fill('input[name="username"], input[type="email"], #username', BB_USER);

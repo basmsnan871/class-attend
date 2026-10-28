@@ -36,12 +36,21 @@ async function main() {
   // Wait for Livewire to boot — poll until a password input exists in DOM
   await page.waitForFunction(() => !!document.querySelector('input[type="password"]'), { timeout: 45000 });
 
+  // Dump all inputs for debugging
+  const inputDump = await page.evaluate(() =>
+    [...document.querySelectorAll('input')].map(i => ({ type: i.type, name: i.name, id: i.id, visible: i.offsetParent !== null }))
+  );
+  console.log('Inputs found:', JSON.stringify(inputDump));
+
   // Fill via native setter so Livewire/Alpine picks up the change
   await page.evaluate(([user, pass]) => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    const textInput = [...document.querySelectorAll('input[type="text"]')]
-      .find(i => i.name === '');
+    // find any non-password, non-hidden, non-submit input (username field)
+    const SKIP = new Set(['password', 'hidden', 'submit', 'button', 'checkbox', 'radio', 'file', 'image', 'reset', 'search']);
+    const textInput = [...document.querySelectorAll('input')].find(i => !SKIP.has(i.type));
     const pwInput = document.querySelector('input[type="password"]');
+    if (!textInput) throw new Error('username input not found');
+    if (!pwInput) throw new Error('password input not found');
     setter.call(textInput, user);
     textInput.dispatchEvent(new Event('input', { bubbles: true }));
     textInput.dispatchEvent(new Event('change', { bubbles: true }));
